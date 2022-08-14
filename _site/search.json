@@ -2,6 +2,17 @@
   
     {
 
+      "title"    : "Race (on) condition(s) in Rails",
+      "url"      : "/2022/08/14/race-on-condiitons-in-rails",
+      "category" : "",
+      "tags"     : "ruby, rails, race condition, optimistic lock, pesimistic lock",
+      "date"     : "2022-08-14 00:00:00 +0200",
+      "description" : "How to solve race condition problems in rails"
+
+    } ,
+  
+    {
+
       "title"    : "Proxy as the way of metaprogramming in JS",
       "url"      : "/2022/08/12/proxy-as-the-way-of-metaprogramming-in-js",
       "category" : "",

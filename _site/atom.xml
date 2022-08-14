@@ -4,13 +4,110 @@
  <title>boch.dev</title>
  <link href="http://localhost:4000/atom.xml" rel="self"/>
  <link href="http://localhost:4000/"/>
- <updated>2022-08-12T13:59:11+02:00</updated>
+ <updated>2022-08-14T15:49:34+02:00</updated>
  <id>http://localhost:4000</id>
  <author>
    <name>Patryk</name>
    <email>patrykboch@gmail.com</email>
  </author>
 
+ 
+ <entry>
+   <title>Race (on) condition(s) in Rails</title>
+   <link href="http://localhost:4000/2022/08/14/race-on-condiitons-in-rails"/>
+   <updated>2022-08-14T00:00:00+02:00</updated>
+   <id>http://localhost:4000/2022/08/14/race-on-condiitons-in-rails</id>
+   <content type="html">&lt;p&gt;Some argue that Ruby on Rails applications cannot scale. That is a common response given by candidates in job interviews when asked about the disadvantages of the framework. I don’t want to choose a side. I might respond, “it depends” - as always. Anyhow, if you want to prepare your app for receiving numerous requests at once, you need to consider the &lt;em&gt;race condition&lt;/em&gt; issue which is liable to cause us troubles.&lt;/p&gt;
+
+&lt;p&gt;I don’t want to delve into the definition of “race condition” as I’m sure my readers understand what it is because it is fundamental to software engineering. I’d like to concentrate on ways to get rid of this. If you’re unfamiliar and you want to discover more about the term’s origins, go &lt;a href=&quot;https://devopedia.org/race-condition-software&quot;&gt;here&lt;/a&gt;. Anyways, one line will adequately describe the problem.&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;When your app allows multiple requests to interact with the same records, and one request overrides changes made by another without taking them into account.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;For instance, if a large number of requests modify the same record at the same time in multi-users scenario.&lt;/p&gt;
+
+&lt;p&gt;As my final point in this introduction, I want to emphasize that a database must ensure integrity of data, particularly when performing concurrent operations. Integrity introduces the ACID-compliant idea of “locking” into the picture. Because of this, both optimistic and pessimistic locking are considered as means of addressing race condition issues.&lt;/p&gt;
+
+&lt;h2 id=&quot;good-old-optimistic-locking&quot;&gt;Good old &lt;em&gt;optimistic locking&lt;/em&gt;&lt;/h2&gt;
+
+&lt;p&gt;Optimistic locking is when the version attribute maintained in a database column is taken into account. It’s the implicit technique of dodging the issue IMO. If we intend to use it, the special &lt;em&gt;lock_version&lt;/em&gt; column needs to be added and Active Record, which is Rails’ default component, takes care of minimizing data conflicts.&lt;/p&gt;
+
+&lt;div class=&quot;language-ruby highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;add_column&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:table_name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:lock_version&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:integer&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Each time a record is updated, the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;lock_version&lt;/code&gt; entity is increased and the locking features make sure that records will only allow the last one stored to throw a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;StaleObjectError&lt;/code&gt; if there is a parallel update of any kind. Then, we can attempt updating the data again.&lt;/p&gt;
+
+&lt;script src=&quot;https://gist.github.com/patrykboch/99296a4395b362ed3dbd279adedf02b1.js&quot;&gt;&lt;/script&gt;
+
+&lt;p&gt;Rails are adaptable; if you want to use your own table with a name that differs from &lt;em&gt;lock_version&lt;/em&gt; you can do so by specyfing in your model:&lt;/p&gt;
+
+&lt;div class=&quot;language-ruby highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;locking_column&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:custom_lock_version&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Why is this type of dealing with race condition regarded as optimistic? Because it is assumed that database conflicts occur less frequently. Optimistic locking performs by simply comparing the “version” column value. As a result, it does not represent a true database lock.&lt;/p&gt;
+
+&lt;h2 id=&quot;good-old-pessimistic-locking&quot;&gt;Good old &lt;em&gt;pessimistic locking&lt;/em&gt;&lt;/h2&gt;
+
+&lt;p&gt;Pessimistic locking, on the other hand, is a technique that counts on more frequent database conflicts. Since it offers an exclusive lock on the record, it is regarded as more explicit. When a single request modifies a record, it locks it until a transaction is completed. For this purpose a built-in methods &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;with_lock&lt;/code&gt; and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;#lock!&lt;/code&gt; are used. Both operate similarly to each other. The main difference is that the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;#lock!&lt;/code&gt; needs to be used within an Active Record’s transaction since it is unlocked again when the surrounding transaction is finished; sadly, using it outside the transaction block is ineffective. The &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;with_lock&lt;/code&gt; method initiates a database transaction by itself. Anyways, all methods prevent others from reading or writing a record until the transaction is completed.&lt;/p&gt;
+
+&lt;script src=&quot;https://gist.github.com/patrykboch/0ec6ae5943fc43331771a34ac1df9fe2.js&quot;&gt;&lt;/script&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://api.rubyonrails.org/classes/ActiveRecord/Locking/Pessimistic.html&quot;&gt;See the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;with_lock&lt;/code&gt; API reference&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;summing-up-good-old-techniques&quot;&gt;Summing up good old techniques&lt;/h2&gt;
+
+&lt;p&gt;Both locking methods are regarded as useful; however, the cost of a transaction retry must be considered when selecting a suitable locking scheme. It is determined by app requirements and business logic. Let’s summarize these two approaches briefly.
+&lt;br /&gt;
+&lt;br /&gt;&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Optimistic locking&lt;/th&gt;
+      &lt;th&gt;Pessimistic locking&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Locks a record once changes are comitted to db&lt;/td&gt;
+      &lt;td&gt;Locks record once it is edited&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Considers data conflicts less frequently&lt;/td&gt;
+      &lt;td&gt;Considers data conflicts more frequently&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Needs a version number stored in a db column for locking a record&lt;/td&gt;
+      &lt;td&gt;Needs an invocation of &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;with_lock&lt;/code&gt; or &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;#lock!&lt;/code&gt; methods for locking a record&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Allows a conflict to occur and may retry or throw an error&lt;/td&gt;
+      &lt;td&gt;Blocks conflicts until a record is unlocked (a transaction is done)&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Is used once a cost of retry is low&lt;/td&gt;
+      &lt;td&gt;Is used once a cost of retry is high&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;&lt;br /&gt;
+Rather than locking a record for entire transactions by pessimistic way, I’d take the optimistic approach and that’s what I recommend. As alwyas, at the end, it depends on the use case that may force the pessimistic approach.&lt;/p&gt;
+
+&lt;p&gt;There are more methods besides optimism and pessimism to stay away from race conditions. Since more libraries need to be installed, let’s quickly go over the details of two additional, more particular approaches.&lt;/p&gt;
+
+&lt;h2 id=&quot;advisory-locking&quot;&gt;Advisory locking&lt;/h2&gt;
+
+&lt;p&gt;Another useful technique is the advisory locking. It doesn’t lock records but guarantees that no two processes operate another process at the same time (by adding mutexes). In order to do so you’d need to extend an app with &lt;a href=&quot;https://github.com/ClosureTree/with_advisory_lock&quot;&gt;&lt;em&gt;with_advisory_lock&lt;/em&gt;&lt;/a&gt; gem. See official docs for details.&lt;/p&gt;
+
+&lt;h2 id=&quot;background-processing-and-queues&quot;&gt;Background processing and queues&lt;/h2&gt;
+
+&lt;p&gt;I’m sure that all readers know what background processing is as it’s fundamental. In ruby apps Sidekiq is used frequently to handle background jobs that may alter db records. An extension to Sidekiq - &lt;a href=&quot;https://github.com/mhenrixon/sidekiq-unique-jobs&quot;&gt;SidekiqUniqueJobs&lt;/a&gt; adds extra constraints and prevents from race conditions there. The configuration is pretty straight forward since only an extra middleware must be configured. See official docs for details.&lt;/p&gt;
+
+&lt;p&gt;It may be difficult to create consistent systems without problems with data integrity so knowing strategies that let us avoid race conditions are desirable. Of course, there are more locking strategies, but I’ve only shown those that I find most useful in my day-to-day work as a developer.&lt;/p&gt;
+</content>
+ </entry>
  
  <entry>
    <title>Proxy as the way of metaprogramming in JS</title>
