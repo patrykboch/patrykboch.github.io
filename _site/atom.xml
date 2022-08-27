@@ -4,13 +4,125 @@
  <title>boch.dev</title>
  <link href="http://localhost:4000/atom.xml" rel="self"/>
  <link href="http://localhost:4000/"/>
- <updated>2022-08-14T15:49:34+02:00</updated>
+ <updated>2022-08-27T18:00:03+02:00</updated>
  <id>http://localhost:4000</id>
  <author>
    <name>Patryk</name>
    <email>patrykboch@gmail.com</email>
  </author>
 
+ 
+ <entry>
+   <title>React moved into adulthood. Reflections on updating React to v18</title>
+   <link href="http://localhost:4000/2022/08/20/updating-to-react-18"/>
+   <updated>2022-08-20T00:00:00+02:00</updated>
+   <id>http://localhost:4000/2022/08/20/updating-to-react-18</id>
+   <content type="html">&lt;p&gt;React 18 is out. I mean… it’s been available for over four months and I’ve just finished a kinda challenging process of migration from 17 to 18 in a huge JS app which is a mature SaaS product. I guess I completed it since you never know when the monster named tech debt could bite you. Anyways, I’d want to share some views on updating to 18v here, in the hopes that someone would find them useful.&lt;/p&gt;
+
+&lt;p&gt;If you’re unfamiliar with the topic of version 18, &lt;a href=&quot;https://reactjs.org/blog/2022/03/29/react-v18.html&quot;&gt;read the official docs of the latest React&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-new-api&quot;&gt;The new API&lt;/h2&gt;
+
+&lt;p&gt;Before considering bumping, please note - React’s most significant API has been modified. This means the commonly known and essential root mounting with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ReactDOM.render&lt;/code&gt; is deprecated. Of course, it’s still supported (due to backward compatibility), but it produces irritating warnings in production env and floods specs run. Hint: a crazy spy may save us from the warnings flood in a spec run, but nothing will help in production except replacing the old API with the desired new &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ReactDOMClient.createRoot&lt;/code&gt;.&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Only the use of the createRoot API enables all React 18 features; otherwise, it behaves like v17. It’s not worth updating if you don’t have time to refactor.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;I once went to a tech conference where one of the speakers was convincing the audience that it’s not crazy to consider releasing tech products with a failure. Failures bring crises, crises - the best solutions. I don’t take a stupid warning a failure, but what is most important the API replacement may fail in big JS projects of course. I assume the cost of the bump, disappointment, wasted time, tech debt to pay off etc. Maybe it’s not worth making it at this time, following the YAGNI principle. So, before updating the API in crucial parts, consider what would your customers do if an app didn’t work for one hour? Especially when test coverages are not credible and only a happy path is checked on your CI. That was not my case, but it’s worth asking questions: is it a good time to do such updating? Do I really need the React 18 features now? What profits does it bring to my project? Please take such updating as a huge task to accomplish.&lt;/p&gt;
+
+&lt;h2 id=&quot;code-updates&quot;&gt;Code updates&lt;/h2&gt;
+
+&lt;p&gt;Apart from replacing &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ReactDOM.render&lt;/code&gt; with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ReactDOMClient.createRoot&lt;/code&gt;, the whole bump entails code updatings, like:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;Each browser’s event mock must be wrapped into &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;act&lt;/code&gt; (as well as the mounting itself) if a component is run with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;createRoot&lt;/code&gt; in specs. Consider ~2k places you have to update to make specs green again. You may think a script which updates everything in less than a second with fancy regex may save us time. Believe me, ~10-15% of occurrences need special care. That means hours of debugging and figuring out what’s wrong with the spec setup or assertion.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Because &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;unmountComponentAtNode&lt;/code&gt; is deprecated, a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Root&lt;/code&gt; instance must be accessible on unmounting.
+Before, the obsolete API took a node and unmounted components at any time. Currently, the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;createRoot&lt;/code&gt; returns a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Root&lt;/code&gt; object which has two methods: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;unmount&lt;/code&gt; and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;render&lt;/code&gt;. That’s the next reason for refactoring such places since direct access to a Root instance is needed.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;I also discover issues with updates to a state with v18. The cause: one of the new features is in action: &lt;a href=&quot;https://reactjs.org/blog/2022/03/08/react-18-upgrade-guide.html#automatic-batching&quot;&gt;&lt;em&gt;automatic batching&lt;/em&gt;&lt;/a&gt;. As alwyas, in such cases, you can disable it or refactor a component in question taking the new behavior into account. Disabling is done by &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;flushSync&lt;/code&gt; helper.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Installed third-party libraries might not support React 18 at this time or never will. Some of them might have code built using outdated ideas and APIs. Without a general rewrite, they will no longer be able to support version 18 at all. Checking the cost of swapping out one package for another or making a contribution is highly advised. Note: NPM provides the —legacy-peer-deps switch; when used, it suppresses warnings for peerDependencies that are not supported.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;If your project is a framework-like app, such as an SDK, and you need to support both v17 and v18 at the same time, this is today not possible in a clean way, in my opinion. The ‘createRoot’ function is imported from ‘react-dom/client’ while the ‘render’ function is imported from ‘react-dom’. You can try to devise various workarounds, such as exporting it from the same (sub)module or proxying it. Dynamic imports can also enter the game, although all solutions are basically hacks hard to maintain.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;If you use a Node server as an app that generates a static markup or so, you will also need to update the API, eg. &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;hydrate&lt;/code&gt; is now &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;hydrateRoot&lt;/code&gt;. Some methods are marked deprecated compared to the v17 like &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;renderToNodeStream&lt;/code&gt;, some are new like &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;renderToPipeableStream&lt;/code&gt;. You have to delve into documentation and consider the usage which may cause side-effects you cannot expect.&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;types-updates&quot;&gt;Types updates&lt;/h2&gt;
+
+&lt;p&gt;If you use Typescript with React as I do, you must fix the issues that the most recent types package will point up, like:
+&lt;br /&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;There is no longer support for implicit children given to a component; this was convenient for devs using v17 or lower because it involved less code to write. Children must currently be explicitly declared in prop definitions or via one of the built-in types, such as &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;PropsWithChildren&lt;/code&gt;. What was the motivation for the change? According to the author of the patch, implicit children are an excess prop (one that is sent to a component but is not actually handled by a component) that violates the &lt;a href=&quot;https://en.wikipedia.org/wiki/Principle_of_least_astonishment#:~:text=The%20principle%20of%20least%20astonishment,not%20astonish%20or%20surprise%20users.&quot;&gt;POLA (principle of least astonishment&lt;/a&gt; rule of software design. The goal, as always, was to increase consistency and eliminate excesses.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;No more &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;React.SFC&lt;/code&gt; or &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;React.StatelessComponent&lt;/code&gt; and similar types that start with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;SFC-&lt;/code&gt;. They’ve been replaced by &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;React.FC&lt;/code&gt; / &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;React.FunctionComponent&lt;/code&gt;. I delighted with the naming change, which was never correct in my opinion because ‘Stateless’ was a synonym for a function component, but nobody takes into account that class components might also be stateless. That was puzzling because the naming indicated the implementation detail.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;An empty object &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;{}&lt;/code&gt; is no longer supported as a legit &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ReactFragment&lt;/code&gt;. No explanation should be offered there, in my opinion, because it was never accurate because erroneous types might be rendered and TS did not complain but failed at runtime. AFAIK, it was the hack for implicit children.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;The default type of ‘this.context’ is ‘unknown,’ not ‘any,’ which did not raise TS issues and was silent. The update was made in response to a request from the React community. In fact, this means that a suitable type must be introduced to a context wherever it is used.&lt;/li&gt;
+  &lt;li&gt;There are more, non-critical changes to the type definitions as described above. For example, type deprecations. You may readily identify them by using &lt;a href=&quot;https://github.com/eps1lon/types-react-codemod&quot;&gt;codemod&lt;/a&gt;, a tool built by the author of these changes to types.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Aside from code updates, the React types must be modified to reflect at least the primary changes. Regrettably, for large JS projects, TS is more rigorous now, and does not allow things that were permitted in v17 or below. This should be considered when comparing the TS rules followed in an app. What if the majority of the components need to be refactored or updated?
+&lt;br /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;strict-mode-behavior&quot;&gt;Strict mode behavior&lt;/h2&gt;
+
+&lt;p&gt;The next, interesting thing is the strict mode that v18 offers. React, as docs states, in the further releases wants to ensure &lt;a href=&quot;https://reactjs.org/docs/strict-mode.html#ensuring-reusable-state&quot;&gt;the reusable state&lt;/a&gt;. For that purpose, the newest StrictMode adds ‘strict mode effects’ that intentionally call side effects double times (mounting, unmounting, mounting) in dev mode. Some effects may not work as expected eg. subscriptions might be not properly destroyed in clean-up functions. This may make the strict mode off until callbacks are adjusted to the double invocation. If you enabled the mode in v18, the not properly cleaned subscriptions may entail additional refactorings.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-bumping-advices&quot;&gt;The bumping advices&lt;/h2&gt;
+
+&lt;p&gt;Here are some pointers for anyone thinking about bumping:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;Check with your team if eg. upcoming sprint is the right moment for the fully bumping. Considering the task as large and potentially failing without code refactorings, type updates, or paying off tech debt. Is it more important to use the features that v18 delivers or is it a nice-to-have? Which issues will React 18 address in your project?&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Evaluate the third-party libraries your app requires. Do they include v18 support in their bundle? Does the package.json - peerDependecies specify the latest React? How much work will it take to get them ready for version 18? Try updating them to the most recent versions and see whether everything works as it should. Even if the maintainers make them v18 compliant, you should upgrade them to the most recent version, before ensure that none of your features are broken. For a variety of reasons, legacy apps cannot bump certain of the packages, check if your software can manage that. Consider making contributions to other libraries that haven’t yet supported v18 but are required by your software. Keep in mind you can always use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;npm i --legacy-peer-deps&lt;/code&gt; to skip &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;peerDependencies&lt;/code&gt; check.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Always stick to the official React docs and manuals regarding update commands you need to type in the terminal, skip tutorials that suggest crazy things.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Analyze the specs you have. Verify that &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;act&lt;/code&gt; is used around each of the mocked events. All functions responsible for (re)rendering components must be compared with act and v18 is more strict in that matter, see &lt;a href=&quot;https://reactjs.org/docs/test-utils.html#act&quot;&gt;act docs&lt;/a&gt; for further info. If your assertion fails without any reasons try to use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;act&lt;/code&gt; in your setup. Best if the &lt;a href=&quot;https://reactjs.org/docs/testing-recipes.html&quot;&gt;React test recipes&lt;/a&gt; are followed.&lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Count the number of times your app uses deprecated API methods such as &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ReactDOM.render&lt;/code&gt; and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ReactDOM.unmountComponentAtNode&lt;/code&gt;. Change them using the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;createRoot&lt;/code&gt; API. As the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Root&lt;/code&gt; object must be accessible for the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;unmount&lt;/code&gt; method, refactoring is most likely required. I’d create a PR for each instance of the deprecation to guarantee that nothing breaks.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Apply the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;StrictMode&lt;/code&gt; immediately after the bump. It may benefit in finding unsupported methods and other issues; see the &lt;a href=&quot;https://reactjs.org/docs/strict-mode.html&quot;&gt;StrictMode documentation&lt;/a&gt;.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Determine how many Class components you still keep. If not too much, I’d focus on converting the most critical ones into functions: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;React.FC&lt;/code&gt;. I’ve noticed that hook-based components aren’t very verbose when it comes to warnings or errors.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;If you’re using Typescript, you can utilize the &lt;a href=&quot;https://github.com/eps1lon/types-react-codemod&quot;&gt;codemod&lt;/a&gt; to highlight areas of your app that need to be tweaked. The most significant change is the removal of support for the implicit children prop. It must be stated explicitly.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;You might not want to use the automatic batching feature. It could potentially be a reason for the spec failing. You can disable it by using the ‘flushSync’ helper, but keep in mind that it degrades performance,  see the &lt;a href=&quot;https://reactjs.org/docs/react-dom.html#flushsync&quot;&gt;docs of flushSync&lt;/a&gt;.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;I would take care of any potential refactorings stated above before the React update, as they all make React 17 happy as well. You can interpret it as a bump preparations.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;summary&quot;&gt;Summary&lt;/h2&gt;
+
+&lt;p&gt;What I like about software engineering is that it can be done incrementally. I recommend having a reliable plan in place to change the React version of an app smoothly and easily. The way that nobody noticed but your CI tools on performance score. In my case that was the most challenging React update I’ve ever made. If you are on the same task and need advice, you can try to reach me out.&lt;/p&gt;
+
+&lt;p&gt;React 18 is great ;-)&lt;/p&gt;
+</content>
+ </entry>
  
  <entry>
    <title>Race (on) condition(s) in Rails</title>
@@ -29,7 +141,7 @@
 
 &lt;p&gt;As my final point in this introduction, I want to emphasize that a database must ensure integrity of data, particularly when performing concurrent operations. Integrity introduces the ACID-compliant idea of “locking” into the picture. Because of this, both optimistic and pessimistic locking are considered as means of addressing race condition issues.&lt;/p&gt;
 
-&lt;h2 id=&quot;good-old-optimistic-locking&quot;&gt;Good old &lt;em&gt;optimistic locking&lt;/em&gt;&lt;/h2&gt;
+&lt;h2 id=&quot;optimistic-locking&quot;&gt;Optimistic locking&lt;/h2&gt;
 
 &lt;p&gt;Optimistic locking is when the version attribute maintained in a database column is taken into account. It’s the implicit technique of dodging the issue IMO. If we intend to use it, the special &lt;em&gt;lock_version&lt;/em&gt; column needs to be added and Active Record, which is Rails’ default component, takes care of minimizing data conflicts.&lt;/p&gt;
 
@@ -47,7 +159,7 @@
 
 &lt;p&gt;Why is this type of dealing with race condition regarded as optimistic? Because it is assumed that database conflicts occur less frequently. Optimistic locking performs by simply comparing the “version” column value. As a result, it does not represent a true database lock.&lt;/p&gt;
 
-&lt;h2 id=&quot;good-old-pessimistic-locking&quot;&gt;Good old &lt;em&gt;pessimistic locking&lt;/em&gt;&lt;/h2&gt;
+&lt;h2 id=&quot;pessimistic-locking&quot;&gt;Pessimistic locking&lt;/h2&gt;
 
 &lt;p&gt;Pessimistic locking, on the other hand, is a technique that counts on more frequent database conflicts. Since it offers an exclusive lock on the record, it is regarded as more explicit. When a single request modifies a record, it locks it until a transaction is completed. For this purpose a built-in methods &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;with_lock&lt;/code&gt; and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;#lock!&lt;/code&gt; are used. Both operate similarly to each other. The main difference is that the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;#lock!&lt;/code&gt; needs to be used within an Active Record’s transaction since it is unlocked again when the surrounding transaction is finished; sadly, using it outside the transaction block is ineffective. The &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;with_lock&lt;/code&gt; method initiates a database transaction by itself. Anyways, all methods prevent others from reading or writing a record until the transaction is completed.&lt;/p&gt;
 
@@ -55,7 +167,7 @@
 
 &lt;p&gt;&lt;a href=&quot;https://api.rubyonrails.org/classes/ActiveRecord/Locking/Pessimistic.html&quot;&gt;See the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;with_lock&lt;/code&gt; API reference&lt;/a&gt;.&lt;/p&gt;
 
-&lt;h2 id=&quot;summing-up-good-old-techniques&quot;&gt;Summing up good old techniques&lt;/h2&gt;
+&lt;h2 id=&quot;what-to-choose&quot;&gt;What to choose?&lt;/h2&gt;
 
 &lt;p&gt;Both locking methods are regarded as useful; however, the cost of a transaction retry must be considered when selecting a suitable locking scheme. It is determined by app requirements and business logic. Let’s summarize these two approaches briefly.
 &lt;br /&gt;
@@ -97,13 +209,17 @@ Rather than locking a record for entire transactions by pessimistic way, I’d t
 
 &lt;p&gt;There are more methods besides optimism and pessimism to stay away from race conditions. Since more libraries need to be installed, let’s quickly go over the details of two additional, more particular approaches.&lt;/p&gt;
 
-&lt;h2 id=&quot;advisory-locking&quot;&gt;Advisory locking&lt;/h2&gt;
+&lt;h2 id=&quot;what-else&quot;&gt;What else?&lt;/h2&gt;
+
+&lt;h3 id=&quot;advisory-locking&quot;&gt;Advisory locking&lt;/h3&gt;
 
 &lt;p&gt;Another useful technique is the advisory locking. It doesn’t lock records but guarantees that no two processes operate another process at the same time (by adding mutexes). In order to do so you’d need to extend an app with &lt;a href=&quot;https://github.com/ClosureTree/with_advisory_lock&quot;&gt;&lt;em&gt;with_advisory_lock&lt;/em&gt;&lt;/a&gt; gem. See official docs for details.&lt;/p&gt;
 
-&lt;h2 id=&quot;background-processing-and-queues&quot;&gt;Background processing and queues&lt;/h2&gt;
+&lt;h3 id=&quot;background-processing-and-queues&quot;&gt;Background processing and queues&lt;/h3&gt;
 
 &lt;p&gt;I’m sure that all readers know what background processing is as it’s fundamental. In ruby apps Sidekiq is used frequently to handle background jobs that may alter db records. An extension to Sidekiq - &lt;a href=&quot;https://github.com/mhenrixon/sidekiq-unique-jobs&quot;&gt;SidekiqUniqueJobs&lt;/a&gt; adds extra constraints and prevents from race conditions there. The configuration is pretty straight forward since only an extra middleware must be configured. See official docs for details.&lt;/p&gt;
+
+&lt;h2 id=&quot;summary&quot;&gt;Summary&lt;/h2&gt;
 
 &lt;p&gt;It may be difficult to create consistent systems without problems with data integrity so knowing strategies that let us avoid race conditions are desirable. Of course, there are more locking strategies, but I’ve only shown those that I find most useful in my day-to-day work as a developer.&lt;/p&gt;
 </content>

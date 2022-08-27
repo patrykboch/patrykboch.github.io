@@ -2,10 +2,21 @@
   
     {
 
+      "title"    : "React moved into adulthood. Reflections on updating React to v18",
+      "url"      : "/2022/08/20/updating-to-react-18",
+      "category" : "",
+      "tags"     : "JS, React, Typescript, React 18, ceateRoot API",
+      "date"     : "2022-08-20 00:00:00 +0200",
+      "description" : "Thoughts on updating to v18 in a big Typescript project"
+
+    } ,
+  
+    {
+
       "title"    : "Race (on) condition(s) in Rails",
       "url"      : "/2022/08/14/race-on-condiitons-in-rails",
       "category" : "",
-      "tags"     : "ruby, rails, race condition, optimistic lock, pesimistic lock",
+      "tags"     : "ruby, rails, race condition, optimistic lock, pessimistic lock",
       "date"     : "2022-08-14 00:00:00 +0200",
       "description" : "How to solve race condition problems in rails"
 
