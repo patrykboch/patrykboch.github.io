@@ -56,7 +56,7 @@ Aside from code updates, the React types must be modified to reflect at least th
 
 The next, interesting thing is the strict mode that v18 offers. React, as docs states, in the further releases wants to ensure [the reusable state](https://reactjs.org/docs/strict-mode.html#ensuring-reusable-state). For that purpose, the newest StrictMode adds ‘strict mode effects’ that intentionally call side effects double times (mounting, unmounting, mounting) in dev mode. Some effects may not work as expected eg. subscriptions might be not properly destroyed in clean-up functions. This may make the strict mode off until callbacks are adjusted to the double invocation. If you enabled the mode in v18, the not properly cleaned subscriptions may entail additional refactorings.
 
-## The bumping advices
+## More pieces of advice 
 
 Here are some pointers for anyone thinking about bumping:
 
