@@ -4,7 +4,7 @@
  <title>boch.dev</title>
  <link href="http://localhost:4000/atom.xml" rel="self"/>
  <link href="http://localhost:4000/"/>
- <updated>2022-08-27T18:00:03+02:00</updated>
+ <updated>2022-08-27T18:08:48+02:00</updated>
  <id>http://localhost:4000</id>
  <author>
    <name>Patryk</name>
@@ -83,7 +83,7 @@ Before, the obsolete API took a node and unmounted components at any time. Curre
 
 &lt;p&gt;The next, interesting thing is the strict mode that v18 offers. React, as docs states, in the further releases wants to ensure &lt;a href=&quot;https://reactjs.org/docs/strict-mode.html#ensuring-reusable-state&quot;&gt;the reusable state&lt;/a&gt;. For that purpose, the newest StrictMode adds ‘strict mode effects’ that intentionally call side effects double times (mounting, unmounting, mounting) in dev mode. Some effects may not work as expected eg. subscriptions might be not properly destroyed in clean-up functions. This may make the strict mode off until callbacks are adjusted to the double invocation. If you enabled the mode in v18, the not properly cleaned subscriptions may entail additional refactorings.&lt;/p&gt;
 
-&lt;h2 id=&quot;the-bumping-advices&quot;&gt;The bumping advices&lt;/h2&gt;
+&lt;h2 id=&quot;more-pieces-of-advice&quot;&gt;More pieces of advice&lt;/h2&gt;
 
 &lt;p&gt;Here are some pointers for anyone thinking about bumping:&lt;/p&gt;
 
