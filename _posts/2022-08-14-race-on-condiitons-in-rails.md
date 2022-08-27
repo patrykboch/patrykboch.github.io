@@ -2,7 +2,7 @@
 layout: post
 title: Race (on) condition(s) in Rails
 description: How to solve race condition problems in rails
-tags: [ruby, rails, race condition, optimistic lock, pesimistic lock]
+tags: [ruby, rails, race condition, optimistic lock, pessimistic lock]
 comments: true
 published: true
 ---
@@ -17,7 +17,7 @@ For instance, if a large number of requests modify the same record at the same t
 
 As my final point in this introduction, I want to emphasize that a database must ensure integrity of data, particularly when performing concurrent operations. Integrity introduces the ACID-compliant idea of "locking" into the picture. Because of this, both optimistic and pessimistic locking are considered as means of addressing race condition issues.
 
-## Good old _optimistic locking_
+## Optimistic locking
 
 Optimistic locking is when the version attribute maintained in a database column is taken into account. It's the implicit technique of dodging the issue IMO. If we intend to use it, the special _lock_version_ column needs to be added and Active Record, which is Rails' default component, takes care of minimizing data conflicts.
 
@@ -37,7 +37,7 @@ self.locking_column = :custom_lock_version
 
 Why is this type of dealing with race condition regarded as optimistic? Because it is assumed that database conflicts occur less frequently. Optimistic locking performs by simply comparing the "version" column value. As a result, it does not represent a true database lock.
 
-## Good old _pessimistic locking_
+## Pessimistic locking
 
 Pessimistic locking, on the other hand, is a technique that counts on more frequent database conflicts. Since it offers an exclusive lock on the record, it is regarded as more explicit. When a single request modifies a record, it locks it until a transaction is completed. For this purpose a built-in methods `with_lock` and `#lock!` are used. Both operate similarly to each other. The main difference is that the `#lock!` needs to be used within an Active Record's transaction since it is unlocked again when the surrounding transaction is finished; sadly, using it outside the transaction block is ineffective. The `with_lock` method initiates a database transaction by itself. Anyways, all methods prevent others from reading or writing a record until the transaction is completed.
 
@@ -45,7 +45,7 @@ Pessimistic locking, on the other hand, is a technique that counts on more frequ
 
 [See the `with_lock` API reference](https://api.rubyonrails.org/classes/ActiveRecord/Locking/Pessimistic.html).
 
-## Summing up good old techniques
+## What to choose?
 
 Both locking methods are regarded as useful; however, the cost of a transaction retry must be considered when selecting a suitable locking scheme. It is determined by app requirements and business logic. Let's summarize these two approaches briefly.
 <br>
@@ -64,12 +64,16 @@ Rather than locking a record for entire transactions by pessimistic way, I'd tak
 
 There are more methods besides optimism and pessimism to stay away from race conditions. Since more libraries need to be installed, let's quickly go over the details of two additional, more particular approaches.
 
-## Advisory locking
+## What else?
+
+### Advisory locking
 
 Another useful technique is the advisory locking. It doesn't lock records but guarantees that no two processes operate another process at the same time (by adding mutexes). In order to do so you'd need to extend an app with [_with_advisory_lock_](https://github.com/ClosureTree/with_advisory_lock) gem. See official docs for details.
 
-## Background processing and queues
+### Background processing and queues
 
 I'm sure that all readers know what background processing is as it's fundamental. In ruby apps Sidekiq is used frequently to handle background jobs that may alter db records. An extension to Sidekiq - [SidekiqUniqueJobs](https://github.com/mhenrixon/sidekiq-unique-jobs) adds extra constraints and prevents from race conditions there. The configuration is pretty straight forward since only an extra middleware must be configured. See official docs for details.
+
+## Summary
 
 It may be difficult to create consistent systems without problems with data integrity so knowing strategies that let us avoid race conditions are desirable. Of course, there are more locking strategies, but I've only shown those that I find most useful in my day-to-day work as a developer.
