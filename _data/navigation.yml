@@ -5,5 +5,5 @@ links:
   url: /about
 - title: Contact info 
   url: /contact
-- title: Rss
+- title: RSS feed
   url: /atom.xml

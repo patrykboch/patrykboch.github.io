@@ -4,6 +4,7 @@ title: React moved into adulthood. Reflections on updating React to v18
 description: Thoughts on updating to v18 in a big Typescript project
 tags: [JS, React, Typescript, React 18, ceateRoot API]
 published: true
+comments: true
 ---
 
 React 18 is out. I mean... it's been available for over four months and I've just finished a kinda challenging process of migration from 17 to 18 in a huge JS app which is a mature SaaS product. I guess I completed it since you never know when the monster named tech debt could bite you. Anyways, I'd want to share some views on updating to 18v here, in the hopes that someone would find them useful.
@@ -43,7 +44,6 @@ If you use Typescript with React as I do, you must fix the issues that the most 
 - There is no longer support for implicit children given to a component; this was convenient for devs using v17 or lower because it involved less code to write. Children must currently be explicitly declared in prop definitions or via one of the built-in types, such as `PropsWithChildren`. What was the motivation for the change? According to the author of the patch, implicit children are an excess prop (one that is sent to a component but is not actually handled by a component) that violates the [POLA (principle of least astonishment](https://en.wikipedia.org/wiki/Principle_of_least_astonishment#:~:text=The%20principle%20of%20least%20astonishment,not%20astonish%20or%20surprise%20users.) rule of software design. The goal, as always, was to increase consistency and eliminate excesses.
 
 - No more `React.SFC` or `React.StatelessComponent` and similar types that start with `SFC-`. They've been replaced by `React.FC` / `React.FunctionComponent`. I delighted with the naming change, which was never correct in my opinion because 'Stateless' was a synonym for a function component, but nobody takes into account that class components might also be stateless. That was puzzling because the naming indicated the implementation detail.
-  
 - An empty object `{}` is no longer supported as a legit `ReactFragment`. No explanation should be offered there, in my opinion, because it was never accurate because erroneous types might be rendered and TS did not complain but failed at runtime. AFAIK, it was the hack for implicit children.
 
 - The default type of 'this.context' is 'unknown,' not 'any,' which did not raise TS issues and was silent. The update was made in response to a request from the React community. In fact, this means that a suitable type must be introduced to a context wherever it is used.
@@ -56,7 +56,7 @@ Aside from code updates, the React types must be modified to reflect at least th
 
 The next, interesting thing is the strict mode that v18 offers. React, as docs states, in the further releases wants to ensure [the reusable state](https://reactjs.org/docs/strict-mode.html#ensuring-reusable-state). For that purpose, the newest StrictMode adds ‘strict mode effects’ that intentionally call side effects double times (mounting, unmounting, mounting) in dev mode. Some effects may not work as expected eg. subscriptions might be not properly destroyed in clean-up functions. This may make the strict mode off until callbacks are adjusted to the double invocation. If you enabled the mode in v18, the not properly cleaned subscriptions may entail additional refactorings.
 
-## More pieces of advice 
+## More pieces of advice
 
 Here are some pointers for anyone thinking about bumping:
 
@@ -75,7 +75,7 @@ Here are some pointers for anyone thinking about bumping:
 
 - If you're using Typescript, you can utilize the [codemod](https://github.com/eps1lon/types-react-codemod) to highlight areas of your app that need to be tweaked. The most significant change is the removal of support for the implicit children prop. It must be stated explicitly.
 
-- You might not want to use the automatic batching feature. It could potentially be a reason for the spec failing. You can disable it by using the 'flushSync' helper, but keep in mind that it degrades performance,  see the [docs of flushSync](https://reactjs.org/docs/react-dom.html#flushsync).
+- You might not want to use the automatic batching feature. It could potentially be a reason for the spec failing. You can disable it by using the 'flushSync' helper, but keep in mind that it degrades performance, see the [docs of flushSync](https://reactjs.org/docs/react-dom.html#flushsync).
 
 - I would take care of any potential refactorings stated above before the React update, as they all make React 17 happy as well. You can interpret it as a bump preparations.
 
