@@ -81,6 +81,6 @@ Here are some pointers for anyone thinking about bumping:
 
 ## Summary
 
-What I like about software engineering is that it can be done incrementally. I recommend having a reliable plan in place to change the React version of an app smoothly and easily. The way that nobody noticed but your CI tools on performance score. In my case that was the most challenging React update I've ever made. If you are on the same task and need advice, you can try to reach me out.
+What I like about software engineering is that it can be done incrementally. I recommend having a reliable plan in place to change the React version of an app smoothly and easily. The way that nobody noticed but your CI tools on performance score. In my case that was the most challenging React update I've ever made. If you are on the same task and need advice, you can try to reach out to me.
 
 React 18 is great ;-)
